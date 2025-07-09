@@ -19,13 +19,11 @@ struct PhotoView: View {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
-                            .onAppear {
-                                viewModel.detectLips()
-                            }
 
                         if !viewModel.outerLipPoints.isEmpty {
-                            LipOverlayView(
-                                points: viewModel.outerLipPoints,
+                            LipOverlay(
+                                outer: viewModel.outerLipPoints,
+                                inner: viewModel.innerLipPoints,
                                 imageSize: image.size,
                                 containerSize: geo.size,
                                 color: viewModel.lipColor
@@ -34,6 +32,7 @@ struct PhotoView: View {
                     }
                 }
                 .frame(height: 600)
+
                 if let detected = viewModel.didDetectLips {
                     Text(detected ? "Lips have been detected" : "No lips were detected in the image")
                         .foregroundColor(detected ? .green : .red)

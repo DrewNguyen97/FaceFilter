@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-struct LipOverlayView: View {
-    let points: [CGPoint]
+struct LipOverlay: View {
+    let outer: [CGPoint]
+    let inner: [CGPoint]
     let imageSize: CGSize
     let containerSize: CGSize
     let color: Color
@@ -16,44 +17,43 @@ struct LipOverlayView: View {
     var body: some View {
         let imageAspect = imageSize.width / imageSize.height
         let containerAspect = containerSize.width / containerSize.height
-        let displayedSize: CGSize
-        let xOffset: CGFloat
-        let yOffset: CGFloat
 
-        if imageAspect > containerAspect {
-            let width = containerSize.width
-            let height = width / imageAspect
-            displayedSize = CGSize(width: width, height: height)
-            xOffset = 0
-            yOffset = (containerSize.height - height) / 2
-        } else {
-            let height = containerSize.height
-            let width = height * imageAspect
-            displayedSize = CGSize(width: width, height: height)
-            xOffset = (containerSize.width - width) / 2
-            yOffset = 0
+        let (displayedSize, xOffset, yOffset): (CGSize, CGFloat, CGFloat) = {
+            if imageAspect > containerAspect {
+                let width = containerSize.width
+                let height = width / imageAspect
+                return (CGSize(width: width, height: height), 0, (containerSize.height - height) / 2)
+            } else {
+                let height = containerSize.height
+                let width = height * imageAspect
+                return (CGSize(width: width, height: height), (containerSize.width - width) / 2, 0)
+            }
+        }()
+
+        func scaled(_ points: [CGPoint]) -> [CGPoint] {
+            points.map {
+                CGPoint(
+                    x: $0.x * (displayedSize.width / imageSize.width) + xOffset,
+                    y: $0.y * (displayedSize.height / imageSize.height) + yOffset
+                )
+            }
         }
 
         return Path { path in
-            guard !points.isEmpty else { return }
+            guard !outer.isEmpty else { return }
 
-            let scaleX = displayedSize.width / imageSize.width
-            let scaleY = displayedSize.height / imageSize.height
+            let outerScaled = scaled(outer)
+            let innerScaled = scaled(inner)
 
-            let transformedPoints = points.map { point in
-                CGPoint(
-                    x: point.x * scaleX + xOffset,
-                    y: point.y * scaleY + yOffset
-                )
-            }
-
-            path.move(to: transformedPoints.first!)
-            for point in transformedPoints.dropFirst() {
-                path.addLine(to: point)
-            }
+            path.addLines(outerScaled)
             path.closeSubpath()
+
+            if !innerScaled.isEmpty {
+                path.addLines(innerScaled)
+                path.closeSubpath()
+            }
         }
-        .fill(color.opacity(0.5))
+        .fill(color.opacity(0.5), style: FillStyle(eoFill: true)) // even-odd fill
         .blendMode(.multiply)
     }
 }

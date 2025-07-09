@@ -18,6 +18,7 @@ class PhotoViewModel: ObservableObject {
     @Published var alertMessage = ""
     @Published var mouthRect: CGRect?
     @Published var outerLipPoints: [CGPoint] = []
+    @Published var innerLipPoints: [CGPoint] = []
     @Published var lipColor: Color = .red
     @Published var didDetectLips: Bool? = false
 
@@ -58,16 +59,25 @@ class PhotoViewModel: ObservableObject {
                 }
                 return
             }
+            
+            func convert(_ points: [CGPoint]?) -> [CGPoint] {
+                guard let points = points else { return [] }
+                return points.map { point in
+                    let x = (boundingBox.origin.x + point.x * boundingBox.size.width) * imageSize.width
+                    let y = (1 - (boundingBox.origin.y + point.y * boundingBox.size.height)) * imageSize.height
+                    return CGPoint(x: x, y: y)
+                }
+            }
+            
             let boundingBox = face.boundingBox
             let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
-            let points = outerLips.normalizedPoints.map { point -> CGPoint in
-                let x = boundingBox.origin.x + point.x * boundingBox.size.width
-                let y = boundingBox.origin.y + point.y * boundingBox.size.height
-                return CGPoint(x: x * imageSize.width, y: (1 - y) * imageSize.height)
-            }
+            let outer = convert(landmarks.outerLips?.normalizedPoints)
+            let inner = convert(landmarks.innerLips?.normalizedPoints)
+
             DispatchQueue.main.async {
-                self.outerLipPoints = points
-                self.didDetectLips = !points.isEmpty
+                self.outerLipPoints = outer
+                self.innerLipPoints = inner
+                self.didDetectLips = !outer.isEmpty
             }
         }
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
